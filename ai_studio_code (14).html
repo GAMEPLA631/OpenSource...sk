@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mobble Chat • http://localhost:3000</title>
+    <style>
+        :root {
+            --bg-body: #0a0c10;
+            --bg-sidebar: #11141c;
+            --bg-chat: #080a0e;
+            --bg-card: #151a24;
+            --bg-hover: #1c2331;
+            --accent-teal: #10b981;
+            --accent-cyan: #06b6d4;
+            --accent-glow: rgba(6, 182, 212, 0.35);
+            --text-main: #f3f4f6;
+            --text-muted: #8492a6;
+            --border-color: #202736;
+            --user-bubble: #1e293b;
+            --ai-bubble: #11151f;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- 1. SIDEBAR --- */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 18px 14px;
+            flex-shrink: 0;
+            user-select: none;
+            z-index: 10;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 4px 10px 18px 10px;
+            cursor: pointer;
+        }
+
+        .logo-icon {
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-teal));
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 0 14px var(--accent-glow);
+        }
+
+        .logo-text {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .menu-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            list-style: none;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .menu-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-main);
+        }
+
+        .menu-item.active {
+            background: rgba(6, 182, 212, 0.12);
+            color: #38bdf8;
+            border: 1px solid rgba(6, 182, 212, 0.25);
+        }
+
+        .menu-item svg {
+            width: 18px;
+            height: 18px;
+            stroke-width: 2;
+        }
+
+        .limit-widget {
+            background: #141923;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .limit-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .limit-progress-bg {
+            width: 100%;
+            height: 6px;
+            background: #232a3b;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .limit-progress-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, var(--accent-teal), var(--accent-cyan));
+            transition: width 0.3s ease;
+        }
+
+        .limit-subtext {
+            font-size: 0.72rem;
+            color: #64748b;
+        }
+
+        .sidebar-bottom {
+            border-top: 1px solid var(--border-color);
+            padding-top: 12px;
+        }
+
+        /* --- 2. HLAVNÝ CHAT --- */
+        .main-chat {
+            flex: 1;
+            background: var(--bg-chat);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 14px 28px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(17, 20, 28, 0.7);
+            backdrop-filter: blur(8px);
+        }
+
+        .header-title-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .host-badge {
+            font-size: 0.75rem;
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        select.model-select {
+            background: #121620;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 7px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .btn-new-chat {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-new-chat:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        /* Hero Welcome Screen */
+        .hero-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .mascot-box {
+            width: 105px;
+            height: 95px;
+            background: #0f172a;
+            border: 3px solid var(--accent-cyan);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 0 35px var(--accent-glow), inset 0 0 15px rgba(6, 182, 212, 0.3);
+            margin-bottom: 24px;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .mascot-antenna {
+            position: absolute;
+            top: -14px;
+            width: 4px;
+            height: 12px;
+            background: var(--accent-cyan);
+            border-radius: 2px;
+        }
+
+        .mascot-antenna::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: -4px;
+            width: 12px;
+            height: 12px;
+            background: var(--accent-teal);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-teal);
+        }
+
+        .mascot-face {
+            font-size: 32px;
+            color: #38bdf8;
+            text-shadow: 0 0 12px #38bdf8;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .hero-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .hero-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 26px;
+        }
+
+        .hero-pills {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .pill-btn {
+            background: #151a24;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .pill-btn:hover {
+            border-color: var(--accent-cyan);
+            background: var(--bg-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Chat Správy */
+        .chat-feed {
+            display: none;
+            flex: 1;
+            padding: 24px 30px;
+            overflow-y: auto;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 80%;
+        }
+
+        .message.user { align-self: flex-end; flex-direction: row-reverse; }
+        .message.ai { align-self: flex-start; }
+
+        .msg-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .user .msg-avatar { background: #2563eb; }
+        .ai .msg-avatar { background: linear-gradient(135deg, var(--accent-cyan), var(--accent-teal)); }
+
+        .msg-content {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .bubble {
+            padding: 13px 18px;
+            border-radius: 14px;
+            font-size: 0.93rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .user .bubble {
+            background: var(--user-bubble);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+            border: 1px solid #334155;
+        }
+
+        .ai .bubble {
+            background: var(--ai-bubble);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .think-box {
+            background: rgba(6, 182, 212, 0.04);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 6px;
+        }
+
+        .think-title {
+            color: var(--accent-cyan);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            animation: pulse 1.4s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.3); }
+        }
+
+        /* --- 3. INPUT BAR & LIMIT BANNER --- */
+        .input-bar-container {
+            padding: 14px 28px 22px 28px;
+            position: relative;
+        }
+
+        .limit-alert-banner {
+            display: none;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            margin-bottom: 10px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .input-pill-box {
+            background: #141824;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.2s;
+        }
+
+        .input-pill-box:focus-within {
+            border-color: var(--accent-cyan);
+        }
+
+        .btn-input-icon {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .btn-input-icon:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .chat-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 0.92rem;
+            outline: none;
+            resize: none;
+            height: 26px;
+            max-height: 120px;
+            line-height: 1.5;
+        }
+
+        .btn-send {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--accent-teal), #059669);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .btn-send:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* --- 4. MODÁLNE OKNÁ PRE VŠETKY TLAČIDLÁ --- */
+        .modal-backdrop {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-card {
+            background: #141923;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 520px;
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            animation: popIn 0.2s ease;
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 { font-size: 1.2rem; color: #fff; }
+
+        .btn-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .btn-close:hover { color: #fff; }
+
+        .modal-body {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .plan-card {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            background: #0f131a;
+            transition: all 0.2s;
+        }
+
+        .plan-card.active-plan {
+            border-color: var(--accent-teal);
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .plan-card:hover { border-color: var(--accent-cyan); }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-teal));
+            border: none;
+            color: #000;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* Sťahovací Overlay */
+        #modelLoadingOverlay {
+            position: absolute;
+            top: 61px;
+            left: 0;
+            width: 100%;
+            bottom: 0;
+            background: rgba(9, 12, 16, 0.94);
+            backdrop-filter: blur(6px);
+            z-index: 60;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .progress-box {
+            width: 100%;
+            max-width: 440px;
+            background: #1e293b;
+            border-radius: 10px;
+            height: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-teal));
+            transition: width 0.2s;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Skrytý file input pre nahrávanie textov a dokumentov -->
+    <input type="file" id="fileAttachmentInput" style="display:none;" accept=".txt,.js,.py,.html,.css,.json,.md,.csv">
+
+    <!-- 1. SIDEBAR SO VŠETKÝMI FUNKČNÝMI TLAČIDLAMI -->
+    <aside class="sidebar">
+        <div>
+            <div class="logo-area" onclick="openNav('chat')">
+                <div class="logo-icon">✨</div>
+                <div class="logo-text">Mobble</div>
+            </div>
+
+            <ul class="menu-list">
+                <li class="menu-item active" id="nav-chat" onclick="openNav('chat')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    AI Chat
+                </li>
+                <li class="menu-item" id="nav-profile" onclick="openNav('profile')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Profile
+                </li>
+                <li class="menu-item" id="nav-settings" onclick="openNav('settings')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    Settings
+                </li>
+                <li class="menu-item" id="nav-saved" onclick="openNav('saved')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                    Saved Chats (<span id="savedCount">0</span>)
+                </li>
+                <li class="menu-item" id="nav-tools" onclick="openNav('tools')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    Tools
+                </li>
+                <li class="menu-item" id="nav-explore" onclick="openNav('explore')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                    Explore Mobble
+                </li>
+                <li class="menu-item" id="nav-questions" onclick="openNav('questions')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Questions
+                </li>
+                <li class="menu-item" id="nav-membership" onclick="openNav('plans')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    Membership
+                </li>
+                <li class="menu-item" id="nav-plans" onclick="openNav('plans')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    Plan List
+                </li>
+            </ul>
+        </div>
+
+        <div>
+            <!-- ChatGPT LIMIT WIDGET -->
+            <div class="limit-widget">
+                <div class="limit-header">
+                    <span>Hodinový limit:</span>
+                    <strong id="limitRatio">10 / 10</strong>
+                </div>
+                <div class="limit-progress-bg">
+                    <div class="limit-progress-fill" id="limitBar"></div>
+                </div>
+                <div class="limit-subtext" id="limitCountdown">Plán: Free • Reset o 60m</div>
+            </div>
+
+            <div class="sidebar-bottom">
+                <div class="menu-item" onclick="openNav('logout')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Log out
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 2. HLAVNÝ CHAT -->
+    <main class="main-chat">
+        <header class="chat-header">
+            <div class="header-title-box">
+                <span class="header-title">AI Mobble Chat</span>
+                <span class="host-badge">http://localhost:3000</span>
+            </div>
+            <div class="header-right">
+                <select class="model-select" id="modelSelect" onchange="switchModel(this.value)">
+                    <option value="onnx-community/Qwen2.5-0.5B-Instruct" selected>Qwen 2.5 (0.5B) • Rýchly SK</option>
+                    <option value="onnx-community/Qwen2.5-1.5B-Instruct">Qwen 2.5 (1.5B) • Inteligentný</option>
+                    <option value="onnx-community/Llama-3.2-1B-Instruct">Llama 3.2 (1B) • Meta AI</option>
+                    <option value="onnx-community/SmolLM2-135M-Instruct">SmolLM2 (135M) • Ultraľahký</option>
+                </select>
+                <button class="btn-new-chat" onclick="saveAndNewChat()">+ New chat</button>
+            </div>
+        </header>
+
+        <!-- Sťahovací Overlay -->
+        <div id="modelLoadingOverlay">
+            <h3 style="font-size: 1.15rem; color:#fff;">🧠 Nahrávam Neurónový Model do GPU...</h3>
+            <p id="downloadStatus" style="color: var(--text-muted); font-size: 0.85rem;">Pripravujem WebGPU...</p>
+            <div class="progress-box">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <!-- UVÍTACIA HERO OBRAZOVKA -->
+        <div class="hero-view" id="heroView">
+            <div class="mascot-box">
+                <div class="mascot-antenna"></div>
+                <div class="mascot-face">^_^</div>
+            </div>
+            <h1 class="hero-title">Your smart AI buddy<br>for all things digital</h1>
+            <p class="hero-subtitle">Ask me anything - I am Mobble</p>
+
+            <div class="hero-pills">
+                <button class="pill-btn" onclick="quickPrompt('What can you do?')">✨ What can you do?</button>
+                <button class="pill-btn" onclick="quickPrompt('Nauč ma niečo zaujímavé o vesmíre a technológiách')">📚 Learn something</button>
+                <button class="pill-btn" onclick="quickPrompt('Povedz mi viac detailov o tom, ako funguje tvoja neurónová sieť')">💡 Tell me details</button>
+            </div>
+        </div>
+
+        <!-- OBLASŤ SPRÁV -->
+        <div class="chat-feed" id="chatFeed"></div>
+
+        <!-- 3. DOLNÝ PANEL SO SPRÁVOU LIMITOV -->
+        <div class="input-bar-container">
+            <div class="limit-alert-banner" id="limitBanner">
+                <span>⚠️ Dosiahli ste hodinový limit správ pre váš plán.</span>
+                <button class="btn-primary" style="padding:4px 10px; font-size:0.75rem;" onclick="openNav('plans')">Zvýšiť limit (Pro)</button>
+            </div>
+
+            <div class="input-pill-box">
+                <!-- Tlačidlo: Nahrať súbor / dokument -->
+                <button class="btn-input-icon" title="Nahrať textový súbor/kód" onclick="document.getElementById('fileAttachmentInput').click()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </button>
+
+                <!-- Tlačidlo: Vložiť šablónu kódu -->
+                <button class="btn-input-icon" title="Vložiť blok kódu" onclick="insertCodeSnippet()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                </button>
+
+                <textarea class="chat-input" id="userInput" placeholder="Type a prompt to Mobble..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
+
+                <button class="btn-send" id="sendBtn" onclick="sendMessage()" disabled>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 4. MODÁLNE DIALÓGY PRE VŠETKY TLAČIDLÁ -->
+
+    <!-- Profile Modal -->
+    <div class="modal-backdrop" id="modal-profile">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>👤 Môj Profil</h2>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div><strong>Meno:</strong> Používateľ AI</div>
+                <div><strong>Email:</strong> user@localhost.local</div>
+                <div><strong>Použitý hardvér:</strong> <span id="profileGpuBadge">WebGPU akcelerácia</span></div>
+                <div><strong>Celkovo vygenerovaných správ:</strong> <span id="totalMessagesCount">0</span></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="closeModal()">Uložiť a zavrieť</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-backdrop" id="modal-settings">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>⚙️ Nastavenia AI</h2>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <label>Kreativita (Temperature): <span id="tempVal">0.7</span></label>
+                <input type="range" min="0.1" max="1.0" step="0.1" value="0.7" oninput="document.getElementById('tempVal').innerText = this.value; temperature = parseFloat(this.value);">
+
+                <label style="margin-top:10px;">Systémová inštrukcia (Persona):</label>
+                <textarea id="systemPromptInput" style="background:#090c10; border:1px solid #334155; color:#fff; padding:8px; border-radius:8px; height:80px;">Si priateľský, inteligentný AI asistent menom Mobble. Vždy odpovedaj po slovensky. Pred každou odpoveďou najprv analyzuj tému vo vnútri značiek <think> tvoje uvažovanie </think> a potom napíš finálnu odpoveď.</textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="saveSettings()">Uložiť nastavenia</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Saved Chats Modal -->
+    <div class="modal-backdrop" id="modal-saved">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>💾 Uložené konverzácie</h2>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="savedChatsList">
+                <p>Žiadne uložené konverzácie.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="clearAllSaved()">Vymazať históriu</button>
+                <button class="btn-primary" onclick="closeModal()">Zavrieť</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tools Modal -->
+    <div class="modal-backdrop" id="modal-tools">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>🛠️ Rýchle AI Nástroje</h2>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="plan-card" onclick="applyToolPrompt('Zhrň tento text do 3 odrážok: ')">
+                    <div><strong>📝 Zhrnutie textu</strong><br><small>Vytvorí stručné zhrnutie</small></div>
+                </div>
+                <div class="plan-card" onclick="applyToolPrompt('Oprav gramatiku a vylepši štylistiku tohto textu: ')">
+                    <div><strong>✍️ Gramatický korektor</strong><br><small>Opraví chyby v slovenčine</small></div>
+                </div>
+                <div class="plan-card" onclick="applyToolPrompt('Vysvetli tento koncept jednoducho ako 10-ročnému dieťaťu: ')">
+                    <div><strong>🎓 Jednoduché vysvetlenie</strong><br><small>ELI5 metóda učenia</small></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Explore Mobble Modal -->
+    <div class="modal-backdrop" id="modal-explore">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>🧭 Preskúmaj Mobble</h2>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p>Mobble je moderná, 100% autonómna neurónová AI bežiaca priamo na vašom grafickom čipe.</p>
+                <ul style="padding-left:20px; line-height:1.8;">
+                    <li>🔒 <strong>Absolútne súkromie:</strong> Vaše správy nikdy neopúšťajú počítač.</li>
+                    <li>🧠 <strong>Deep Thinking:</strong> Zobrazuje reálny tok myšlienok v reálnom čase.</li>
+                    <li>⚡ <strong>WebGPU akcelerácia:</strong> Výpočty prebiehajú priamo cez shader jadrá.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="closeModal()">Super!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Questions (FAQ) Modal -->
+    <div class="modal-backdrop" id="modal-questions">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>❓ Časté Otázky (FAQ)</h2>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Ako fungujú limity správ?</strong><br>Vo Free pláne máte 10 správ za hodinu. Po vyčerpaní sa počítadlo automaticky resetuje alebo si môžete prepnúť Pro plán.</p>
+                <p><strong>Potrebujem internet?</strong><br>Internet je potrebný len pri prvom načítaní modelu. Následne beží plne offline.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="closeModal()">Rozumiem</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Membership / Plan List Modal -->
+    <div class="modal-backdrop" id="modal-plans">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>💳 Predplatné & Limity správ</h2>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="plan-card" id="plan-card-free" onclick="selectPlan('free')">
+                    <div>
+                        <strong>Free Plán</strong><br>
+                        <small>10 správ za hodinu • Štandardná rýchlosť</small>
+                    </div>
+                    <span id="plan-badge-free" style="color:var(--accent-teal); font-weight:bold;">Aktívny</span>
+                </div>
+
+                <div class="plan-card" id="plan-card-pro" onclick="selectPlan('pro')">
+                    <div>
+                        <strong>Pro Plán (Neobmedzene)</strong><br>
+                        <small>♾️ Žiadne limity správ • Prioritný WebGPU výkon</small>
+                    </div>
+                    <span id="plan-badge-pro" style="color:var(--text-muted);">Aktivovať</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" onclick="closeModal()">Hotovo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Modal -->
+    <div class="modal-backdrop" id="modal-logout">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>🚪 Odhlásenie</h2>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p>Naozaj sa chcete odhlásiť a reštartovať aktuálne sedenie?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">Zrušiť</button>
+                <button class="btn-primary" onclick="performLogout()">Odhlásiť sa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HUGGING FACE TRANSFORMERS.JS INFERENCIA S LIMITMI -->
+    <script type="module">
+        import { pipeline, TextStreamer } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3";
+
+        let generator = null;
+        let isGenerating = false;
+        let currentModel = "";
+        let temperature = 0.7;
+
+        // ChatGPT Limit systém
+        let currentPlan = "free"; // 'free' alebo 'pro'
+        let maxMessagesPerHour = 10;
+        let messagesRemaining = 10;
+        let totalMessagesSent = 0;
+
+        let chatHistory = [
+            {
+                role: "system",
+                content: "Si priateľský, inteligentný AI asistent menom Mobble. Vždy odpovedaj po slovensky. Pred každou odpoveďou najprv detailne analyzuj a premysli logiku vo vnútri značiek <think> tvoje uvažovanie </think> a potom napíš finálnu odpoveď."
+            }
+        ];
+
+        const heroView = document.getElementById("heroView");
+        const chatFeed = document.getElementById("chatFeed");
+        const userInput = document.getElementById("userInput");
+        const sendBtn = document.getElementById("sendBtn");
+        const overlay = document.getElementById("modelLoadingOverlay");
+        const downloadStatus = document.getElementById("downloadStatus");
+        const progressBar = document.getElementById("progressBar");
+        const modelSelect = document.getElementById("modelSelect");
+
+        // UI Limity elementy
+        const limitRatio = document.getElementById("limitRatio");
+        const limitBar = document.getElementById("limitBar");
+        const limitCountdown = document.getElementById("limitCountdown");
+        const limitBanner = document.getElementById("limitBanner");
+
+        /* --- 1. SPRAVOVANIE LIMITOV --- */
+        function updateLimitUI() {
+            if (currentPlan === "pro") {
+                limitRatio.innerText = "♾️ Neobmedzene";
+                limitBar.style.width = "100%";
+                limitCountdown.innerText = "Plán: Pro • Bez limitov";
+                limitBanner.style.display = "none";
+                sendBtn.disabled = !generator || isGenerating;
+                return;
+            }
+
+            limitRatio.innerText = `${messagesRemaining} / ${maxMessagesPerHour}`;
+            const pct = (messagesRemaining / maxMessagesPerHour) * 100;
+            limitBar.style.width = pct + "%";
+            limitCountdown.innerText = `Plán: Free • Reset o 60m`;
+
+            if (messagesRemaining <= 0) {
+                limitBanner.style.display = "flex";
+                sendBtn.disabled = true;
+            } else {
+                limitBanner.style.display = "none";
+                sendBtn.disabled = !generator || isGenerating;
+            }
+        }
+
+        window.selectPlan = function(plan) {
+            currentPlan = plan;
+            if (plan === "pro") {
+                document.getElementById("plan-card-pro").classList.add("active-plan");
+                document.getElementById("plan-card-free").classList.remove("active-plan");
+                document.getElementById("plan-badge-pro").innerText = "Aktívny";
+                document.getElementById("plan-badge-pro").style.color = "var(--accent-teal)";
+                document.getElementById("plan-badge-free").innerText = "Aktivovať";
+                document.getElementById("plan-badge-free").style.color = "var(--text-muted)";
+            } else {
+                document.getElementById("plan-card-free").classList.add("active-plan");
+                document.getElementById("plan-card-pro").classList.remove("active-plan");
+                document.getElementById("plan-badge-free").innerText = "Aktívny";
+                document.getElementById("plan-badge-free").style.color = "var(--accent-teal)";
+                document.getElementById("plan-badge-pro").innerText = "Aktivovať";
+                document.getElementById("plan-badge-pro").style.color = "var(--text-muted)";
+                messagesRemaining = 10;
+            }
+            updateLimitUI();
+            closeModal();
+        };
+
+        /* --- 2. OVLÁDANIE MODÁLOV A MENU --- */
+        window.openNav = function(target) {
+            document.querySelectorAll(".menu-item").forEach(el => el.classList.remove("active"));
+            const navEl = document.getElementById("nav-" + target);
+            if (navEl) navEl.classList.add("active");
+
+            if (target === "chat") {
+                closeModal();
+                return;
+            }
+
+            const modal = document.getElementById("modal-" + target);
+            if (modal) {
+                if (target === "saved") renderSavedChats();
+                modal.style.display = "flex";
+            }
+        };
+
+        window.closeModal = function() {
+            document.querySelectorAll(".modal-backdrop").forEach(m => m.style.display = "none");
+            document.querySelectorAll(".menu-item").forEach(el => el.classList.remove("active"));
+            document.getElementById("nav-chat").classList.add("active");
+        };
+
+        window.saveSettings = function() {
+            const prompt = document.getElementById("systemPromptInput").value.trim();
+            if (prompt) chatHistory[0].content = prompt;
+            closeModal();
+        };
+
+        window.applyToolPrompt = function(prefix) {
+            closeModal();
+            userInput.value = prefix;
+            userInput.focus();
+        };
+
+        window.insertCodeSnippet = function() {
+            userInput.value += "\n```javascript\n// Vlož kód sem...\n```\n";
+            userInput.focus();
+        };
+
+        // Spracovanie nahraných textových súborov
+        document.getElementById("fileAttachmentInput").addEventListener("change", function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                userInput.value += `\n[Súbor: ${file.name}]\n${evt.target.result.slice(0, 1000)}\n`;
+                userInput.focus();
+            };
+            reader.readAsText(file);
+        });
+
+        window.performLogout = function() {
+            closeModal();
+            saveAndNewChat();
+            alert("Boli ste úspešne odhlásený.");
+        };
+
+        /* --- 3. HISTÓRIA & ULOŽENÉ CHATY --- */
+        function renderSavedChats() {
+            const list = document.getElementById("savedChatsList");
+            const chats = JSON.parse(localStorage.getItem("mobble_saved_chats") || "[]");
+            document.getElementById("savedCount").innerText = chats.length;
+
+            if (chats.length === 0) {
+                list.innerHTML = "<p>Nemáte zatiaľ žiadne uložené konverzácie.</p>";
+                return;
+            }
+
+            list.innerHTML = chats.map((c, idx) => `
+                <div class="plan-card" style="margin-bottom:8px;">
+                    <div>
+                        <strong>${escapeHtml(c.title)}</strong><br>
+                        <small>${c.date} • ${c.messages.length} správ</small>
+                    </div>
+                    <button class="btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="loadSavedChat(${idx})">Otvoriť</button>
+                </div>
+            `).join("");
+        }
+
+        window.loadSavedChat = function(idx) {
+            const chats = JSON.parse(localStorage.getItem("mobble_saved_chats") || "[]");
+            if (!chats[idx]) return;
+
+            chatHistory = chats[idx].messages;
+            chatFeed.innerHTML = "";
+            heroView.style.display = "none";
+            chatFeed.style.display = "flex";
+
+            chatHistory.slice(1).forEach(m => {
+                appendMessage(m.role, m.content);
+            });
+
+            closeModal();
+        };
+
+        window.saveAndNewChat = function() {
+            if (chatHistory.length > 1) {
+                const chats = JSON.parse(localStorage.getItem("mobble_saved_chats") || "[]");
+                const firstUserMsg = chatHistory.find(m => m.role === "user")?.content || "Konverzácia";
+                chats.unshift({
+                    title: firstUserMsg.slice(0, 35) + "...",
+                    date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    messages: [...chatHistory]
+                });
+                localStorage.setItem("mobble_saved_chats", JSON.stringify(chats.slice(0, 15)));
+                document.getElementById("savedCount").innerText = chats.length;
+            }
+
+            chatFeed.innerHTML = "";
+            chatFeed.style.display = "none";
+            heroView.style.display = "flex";
+            chatHistory = [chatHistory[0]];
+        };
+
+        window.clearAllSaved = function() {
+            localStorage.removeItem("mobble_saved_chats");
+            renderSavedChats();
+        };
+
+        /* --- 4. NAČÍTANIE MODELU & GENEROVANIE --- */
+        async function loadModel(modelId) {
+            if (currentModel === modelId && generator) return;
+
+            overlay.style.display = "flex";
+            sendBtn.disabled = true;
+            currentModel = modelId;
+
+            const device = navigator.gpu ? "webgpu" : "wasm";
+
+            try {
+                generator = await pipeline("text-generation", modelId, {
+                    dtype: "q4",
+                    device: device,
+                    progress_callback: (p) => {
+                        if (p.status === "progress") {
+                            downloadStatus.innerText = `Sťahujem váhy: ${p.file || ''} (${Math.round(p.progress || 0)}%)`;
+                            progressBar.style.width = (p.progress || 0) + "%";
+                        } else if (p.status === "ready") {
+                            downloadStatus.innerText = "Kompilujem model na GPU...";
+                        }
+                    }
+                });
+
+                overlay.style.display = "none";
+                updateLimitUI();
+            } catch (err) {
+                console.error(err);
+                downloadStatus.innerHTML = `<span style="color:#ef4444;">Chyba: ${err.message}</span>`;
+            }
+        }
+
+        window.switchModel = async function(modelId) {
+            await loadModel(modelId);
+        };
+
+        window.sendMessage = async function() {
+            const text = userInput.value.trim();
+            if (!text || isGenerating || !generator) return;
+
+            if (currentPlan === "free" && messagesRemaining <= 0) {
+                updateLimitUI();
+                return;
+            }
+
+            heroView.style.display = "none";
+            chatFeed.style.display = "flex";
+
+            isGenerating = true;
+            sendBtn.disabled = true;
+            userInput.value = "";
+
+            if (currentPlan === "free") {
+                messagesRemaining--;
+                updateLimitUI();
+            }
+
+            totalMessagesSent++;
+            document.getElementById("totalMessagesCount").innerText = totalMessagesSent;
+
+            chatHistory.push({ role: "user", content: text });
+            appendMessage("user", text);
+
+            const aiMsgDiv = document.createElement("div");
+            aiMsgDiv.className = "message ai";
+            aiMsgDiv.innerHTML = `<div class="msg-avatar">✨</div><div class="msg-content"></div>`;
+            const msgContent = aiMsgDiv.querySelector(".msg-content");
+            chatFeed.appendChild(aiMsgDiv);
+
+            const thinkBox = document.createElement("div");
+            thinkBox.className = "think-box";
+            thinkBox.innerHTML = `
+                <div class="think-title">
+                    <span class="pulse-dot"></span>
+                    <span>Mobble uvažuje v reálnom čase:</span>
+                </div>
+                <div class="think-body">...</div>
+            `;
+            thinkBox.style.display = "none";
+            msgContent.appendChild(thinkBox);
+
+            const bubble = document.createElement("div");
+            bubble.className = "bubble";
+            msgContent.appendChild(bubble);
+
+            chatFeed.scrollTop = chatFeed.scrollHeight;
+
+            let accumulated = "";
+
+            const streamer = new TextStreamer(generator.tokenizer, {
+                skip_prompt: true,
+                callback_function: (token) => {
+                    accumulated += token;
+
+                    if (accumulated.includes("<think>")) {
+                        thinkBox.style.display = "block";
+                        if (!accumulated.includes("</think>")) {
+                            thinkBox.querySelector(".think-body").innerText = accumulated.replace("<think>", "").trim();
+                        } else {
+                            const parts = accumulated.split("</think>");
+                            thinkBox.querySelector(".think-body").innerText = parts[0].replace("<think>", "").trim();
+                            bubble.innerText = parts[1].trim();
+                        }
+                    } else {
+                        bubble.innerText = accumulated;
+                    }
+                    chatFeed.scrollTop = chatFeed.scrollHeight;
+                }
+            });
+
+            try {
+                await generator(chatHistory, {
+                    max_new_tokens: 512,
+                    temperature: temperature,
+                    streamer: streamer
+                });
+
+                chatHistory.push({ role: "assistant", content: accumulated });
+            } catch (err) {
+                bubble.innerText = "Chyba: " + err.message;
+            }
+
+            isGenerating = false;
+            updateLimitUI();
+        };
+
+        window.quickPrompt = function(text) {
+            userInput.value = text;
+            sendMessage();
+        };
+
+        window.handleKeyDown = function(e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        };
+
+        function appendMessage(role, text) {
+            const div = document.createElement("div");
+            div.className = `message ${role}`;
+            div.innerHTML = `
+                <div class="msg-avatar">${role === 'user' ? 'Ty' : '✨'}</div>
+                <div class="msg-content">
+                    <div class="bubble">${escapeHtml(text)}</div>
+                </div>
+            `;
+            chatFeed.appendChild(div);
+            chatFeed.scrollTop = chatFeed.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const d = document.createElement("div");
+            d.innerText = text;
+            return d.innerHTML;
+        }
+
+        // Inicializácia
+        renderSavedChats();
+        updateLimitUI();
+        loadModel(modelSelect.value);
+    </script>
+</body>
+</html>
